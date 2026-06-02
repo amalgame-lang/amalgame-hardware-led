@@ -1,0 +1,69 @@
+namespace Amalgame.Hardware.Led
+
+// ── Amalgame.Hardware.Led — portable LED drivers ──────────
+//
+// Written once against the Amalgame.Hal interfaces, so the SAME driver
+// runs on a Raspberry Pi today (hand it amalgame-hardware-gpio's
+// GpioOut / Pwm) and on a bare-metal MCU later (hand it that backend's
+// DigitalOut / PwmOut). The driver never names a concrete backend.
+//
+//     import Amalgame.Hardware          // GpioOut, Pwm (the Pi backend)
+//     import Amalgame.Hardware.Led
+//
+//     let led = new Led(new GpioOut(17))
+//     led.On()
+//
+//     let rgb = new RgbLed(new Pwm(0, 0), new Pwm(0, 1), new Pwm(1, 0))
+//     rgb.On()
+//     rgb.SetColor(80, 0, 30)          // each channel 0..100 %
+
+import Amalgame.Hal
+
+// A simple on/off LED driven by one digital output line.
+public class Led {
+    private out: DigitalOut
+
+    public Led(out: DigitalOut) {
+        this.out = out
+    }
+
+    public void On()         { this.out.High() }
+    public void Off()        { this.out.Low() }
+    public void Toggle()     { this.out.Toggle() }
+    public void Set(on: bool) {
+        if (on) { this.out.High() } else { this.out.Low() }
+    }
+}
+
+// A common-cathode RGB LED on three PWM channels. Each colour is a
+// 0..100 duty percentage. (Common-anode: invert the percentages.)
+public class RgbLed {
+    private r: PwmOut
+    private g: PwmOut
+    private b: PwmOut
+
+    public RgbLed(r: PwmOut, g: PwmOut, b: PwmOut) {
+        this.r = r
+        this.g = g
+        this.b = b
+    }
+
+    // Set the colour from three 0..100 brightness percentages.
+    public void SetColor(red: int, green: int, blue: int) {
+        let _r: bool = this.r.SetFrequency(1000, red)
+        let _g: bool = this.g.SetFrequency(1000, green)
+        let _b: bool = this.b.SetFrequency(1000, blue)
+    }
+
+    public void On() {
+        let _r: bool = this.r.Enable()
+        let _g: bool = this.g.Enable()
+        let _b: bool = this.b.Enable()
+    }
+
+    public void Off() {
+        let _r: bool = this.r.Disable()
+        let _g: bool = this.g.Disable()
+        let _b: bool = this.b.Disable()
+    }
+}

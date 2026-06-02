@@ -1,0 +1,29 @@
+# Package manifest — amalgame-hardware-led
+#
+# Portable LED drivers written against the Amalgame.Hal interfaces, so
+# the same code runs on a Raspberry Pi (amalgame-hardware-gpio backend)
+# and on a future bare-metal MCU backend. Part of the Amalgame.Hardware
+# component-driver family.
+#
+#   Led     — on/off LED on a DigitalOut. On/Off/Toggle/Set(on)
+#   RgbLed  — RGB LED on three PwmOut. SetColor(r,g,b 0..100)/On/Off
+#
+# Pure Amalgame; no C, no system dependency (the backend brings those).
+
+[package]
+name              = "amalgame-hardware-led"
+version           = "0.1.0"
+license           = "Apache-2.0"
+description       = "Portable LED drivers (simple + RGB-PWM) over the Amalgame.Hal interfaces — one driver, runs on Raspberry Pi (amalgame-hardware-gpio) and future MCU backends."
+authors           = ["Bastien Mouget"]
+required-amalgame = ">=0.8.72"
+schema-version    = 1
+
+[stdlib]
+classes   = ["Led", "RgbLed"]
+header    = "facade-stub.h"
+namespace = "Amalgame.Hardware.Led"
+facade    = "facade.am"
+
+[dependencies]
+amalgame-hal = ">=0.1.0"
