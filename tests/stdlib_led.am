@@ -1,0 +1,35 @@
+// Test the Led driver against a fake DigitalOut (no hardware).
+
+namespace Tests
+
+import Amalgame.Hal
+import Amalgame.Hardware.Led
+
+public class FakeOut implements DigitalOut {
+    private state: int
+    public FakeOut() { this.state = 0 }
+    public void Write(level: int) { this.state = level }
+    public void High() { this.state = 1 }
+    public void Low()  { this.state = 0 }
+    public void Toggle() { if (this.state == 1) { this.state = 0 } else { this.state = 1 } }
+    public int StateOf() { return this.state }
+}
+
+public class Program {
+    public static void Main(string[] args) {
+        var fail: int = 0
+        let f: FakeOut = new FakeOut()
+        let led: Led = new Led(f)
+
+        led.On()
+        if (f.StateOf() == 1) { Console.WriteLine("[PASS] led on") } else { Console.WriteLine("[FAIL] led on"); fail = fail + 1 }
+        led.Off()
+        if (f.StateOf() == 0) { Console.WriteLine("[PASS] led off") } else { Console.WriteLine("[FAIL] led off"); fail = fail + 1 }
+        led.Toggle()
+        if (f.StateOf() == 1) { Console.WriteLine("[PASS] led toggle") } else { Console.WriteLine("[FAIL] led toggle"); fail = fail + 1 }
+        led.Set(false)
+        if (f.StateOf() == 0) { Console.WriteLine("[PASS] led set(false)") } else { Console.WriteLine("[FAIL] led set(false)"); fail = fail + 1 }
+
+        if (fail == 0) { Console.WriteLine("led: all good") }
+    }
+}
