@@ -67,3 +67,74 @@ public class RgbLed {
         let _b: bool = this.b.Disable()
     }
 }
+
+// APA102 / SK9822 addressable RGB LED strip over SPI (has a clock line,
+// so unlike WS2812 it works cleanly from Linux userspace). Per-LED
+// 5-bit global brightness + 8-bit R/G/B. Set pixels, then Show().
+//
+//     let strip = new Apa102(new Spi(0, 0), 30)
+//     strip.Fill(0, 0, 0)
+//     strip.Set(0, 255, 0, 0)          // first LED red
+//     strip.SetBrightness(0, 8)        // 0..31
+//     strip.Show()
+public class Apa102 {
+    private spi: SpiBus
+    private n:   int
+    private buf: List<int>   // 4 ints per LED: brightness, r, g, b
+
+    public Apa102(spi: SpiBus, count: int) {
+        this.spi = spi
+        this.n   = count
+        this.buf = new List<int>()
+        var i: int = 0
+        while (i < count) {
+            this.buf.Add(8)    // brightness (moderate default)
+            this.buf.Add(0)    // r
+            this.buf.Add(0)    // g
+            this.buf.Add(0)    // b
+            i = i + 1
+        }
+    }
+
+    public int Count() { return this.n }
+
+    public void Set(i: int, r: int, g: int, b: int) {
+        if (i < 0 || i >= this.n) { return }
+        this.buf.Set(i * 4 + 1, r)
+        this.buf.Set(i * 4 + 2, g)
+        this.buf.Set(i * 4 + 3, b)
+    }
+
+    // Per-LED 5-bit brightness (0..31).
+    public void SetBrightness(i: int, bri: int) {
+        if (i < 0 || i >= this.n) { return }
+        var v: int = bri
+        if (v < 0)  { v = 0 }
+        if (v > 31) { v = 31 }
+        this.buf.Set(i * 4, v)
+    }
+
+    public void Fill(r: int, g: int, b: int) {
+        var i: int = 0
+        while (i < this.n) { this.Set(i, r, g, b); i = i + 1 }
+    }
+
+    // Push the buffer to the strip: start frame, per-LED frames, end.
+    public void Show() {
+        let frame: List<int> = new List<int>()
+        frame.Add(0)  frame.Add(0)  frame.Add(0)  frame.Add(0)   // start frame
+        var i: int = 0
+        while (i < this.n) {
+            frame.Add(0xE0 + this.buf.Get(i * 4))   // 111 + 5-bit brightness
+            frame.Add(this.buf.Get(i * 4 + 3))      // B
+            frame.Add(this.buf.Get(i * 4 + 2))      // G
+            frame.Add(this.buf.Get(i * 4 + 1))      // R
+            i = i + 1
+        }
+        // End frame: enough clock edges to latch the whole strip.
+        let endBytes: int = (this.n + 15) / 16
+        var e: int = 0
+        while (e < endBytes) { frame.Add(0xFF); e = e + 1 }
+        let _rx: List<int> = this.spi.Transfer(frame)
+    }
+}

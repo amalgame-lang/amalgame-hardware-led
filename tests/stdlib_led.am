@@ -15,6 +15,13 @@ public class FakeOut implements DigitalOut {
     public int StateOf() { return this.state }
 }
 
+public class FakeSpi implements SpiBus {
+    private lastLen: int
+    public FakeSpi() { this.lastLen = 0 }
+    public List<int> Transfer(tx: List<int>) { this.lastLen = tx.Count(); return tx }
+    public int LastLen() { return this.lastLen }
+}
+
 public class Program {
     public static void Main(string[] args) {
         var fail: int = 0
@@ -29,6 +36,14 @@ public class Program {
         if (f.StateOf() == 1) { Console.WriteLine("[PASS] led toggle") } else { Console.WriteLine("[FAIL] led toggle"); fail = fail + 1 }
         led.Set(false)
         if (f.StateOf() == 0) { Console.WriteLine("[PASS] led set(false)") } else { Console.WriteLine("[FAIL] led set(false)"); fail = fail + 1 }
+
+        // APA102 strip: 3 LEDs → frame = 4 start + 3*4 + 1 end = 17 bytes.
+        let sp: FakeSpi = new FakeSpi()
+        let strip: Apa102 = new Apa102(sp, 3)
+        strip.Fill(10, 20, 30)
+        strip.Set(0, 255, 0, 0)
+        strip.Show()
+        if (sp.LastLen() == 17) { Console.WriteLine("[PASS] apa102 frame 17B") } else { Console.WriteLine("[FAIL] apa102 frame " + String_FromInt(sp.LastLen())); fail = fail + 1 }
 
         if (fail == 0) { Console.WriteLine("led: all good") }
     }
