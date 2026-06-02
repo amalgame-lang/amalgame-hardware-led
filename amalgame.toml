@@ -12,7 +12,7 @@
 
 [package]
 name              = "amalgame-hardware-led"
-version           = "0.2.0"
+version           = "0.3.0"
 license           = "Apache-2.0"
 description       = "Portable LED drivers (simple + RGB-PWM) over the Amalgame.Hal interfaces — one driver, runs on Raspberry Pi (amalgame-hardware-gpio) and future MCU backends."
 authors           = ["Bastien Mouget"]
@@ -20,7 +20,7 @@ required-amalgame = ">=0.8.72"
 schema-version    = 1
 
 [stdlib]
-classes   = ["Led", "RgbLed", "Apa102"]
+classes   = ["Led", "RgbLed", "Apa102", "Ws2812"]
 header    = "facade-stub.h"
 namespace = "Amalgame.Hardware.Led"
 facade    = "facade.am"

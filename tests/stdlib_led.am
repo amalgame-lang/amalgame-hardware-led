@@ -45,6 +45,14 @@ public class Program {
         strip.Show()
         if (sp.LastLen() == 17) { Console.WriteLine("[PASS] apa102 frame 17B") } else { Console.WriteLine("[FAIL] apa102 frame " + String_FromInt(sp.LastLen())); fail = fail + 1 }
 
+        // WS2812: 2 px → 9 bytes/px (24 bits × 3) + 40 reset = 58 bytes.
+        let sp2: FakeSpi = new FakeSpi()
+        let px: Ws2812 = new Ws2812(sp2, 2)
+        px.Fill(255, 0, 0)
+        px.Set(1, 0, 8, 0)
+        px.Show()
+        if (sp2.LastLen() == 58) { Console.WriteLine("[PASS] ws2812 frame 58B") } else { Console.WriteLine("[FAIL] ws2812 frame " + String_FromInt(sp2.LastLen())); fail = fail + 1 }
+
         if (fail == 0) { Console.WriteLine("led: all good") }
     }
 }

@@ -138,3 +138,99 @@ public class Apa102 {
         let _rx: List<int> = this.spi.Transfer(frame)
     }
 }
+
+// WS2812 / WS2812B / NeoPixel — the ubiquitous addressable RGB strip,
+// driven over SPI by bit-stream encoding (no precise CPU timing needed,
+// unlike bit-banging). Each WS2812 bit → 3 SPI bits: '1'=110, '0'=100.
+// Run the SPI clock near 2.4 MHz: `spi.SetSpeed(2400000)` before Show().
+//
+//     let px = new Ws2812(new Spi(0, 0), 8)
+//     px.Set(0, 255, 0, 0)             // first pixel red
+//     px.Fill(0, 8, 0)                 // all dim green
+//     px.Show()
+public class Ws2812 {
+    private spi: SpiBus
+    private n:   int
+    private buf: List<int>   // 3 ints per pixel: r, g, b
+
+    public Ws2812(spi: SpiBus, count: int) {
+        this.spi = spi
+        this.n   = count
+        this.buf = new List<int>()
+        var i: int = 0
+        while (i < count * 3) { this.buf.Add(0); i = i + 1 }
+    }
+
+    public int Count() { return this.n }
+
+    public void Set(i: int, r: int, g: int, b: int) {
+        if (i < 0 || i >= this.n) { return }
+        this.buf.Set(i * 3, r)
+        this.buf.Set(i * 3 + 1, g)
+        this.buf.Set(i * 3 + 2, b)
+    }
+
+    public void Fill(r: int, g: int, b: int) {
+        var i: int = 0
+        while (i < this.n) { this.Set(i, r, g, b); i = i + 1 }
+    }
+
+    // Encode the buffer (GRB order, MSB first; each bit → 3 SPI bits)
+    // plus a reset gap, and clock it out.
+    public void Show() {
+        let frame: List<int> = new List<int>()
+        var acc:  int = 0     // bit accumulator
+        var nb:   int = 0     // bits in acc
+
+        var i: int = 0
+        while (i < this.n) {
+            let g: int = this.buf.Get(i * 3 + 1)
+            let r: int = this.buf.Get(i * 3)
+            let b: int = this.buf.Get(i * 3 + 2)
+            // WS2812 wants G, R, B
+            nb = this.PushByte(frame, g, acc, nb); acc = this.AccOut
+            nb = this.PushByte(frame, r, acc, nb); acc = this.AccOut
+            nb = this.PushByte(frame, b, acc, nb); acc = this.AccOut
+            i = i + 1
+        }
+        // 24 WS-bits × 3 = 72 SPI bits = 9 bytes per pixel → byte-aligned.
+        // Reset: ~40 low bytes (>50µs at 2.4 MHz).
+        var z: int = 0
+        while (z < 40) { frame.Add(0); z = z + 1 }
+        let _rx: List<int> = this.spi.Transfer(frame)
+    }
+
+    // Scratch field to return the updated accumulator from PushByte.
+    private AccOut: int
+
+    // Push one colour byte as 8×3 SPI bits into `frame`; returns the new
+    // bit-count, and leaves the new accumulator in this.AccOut.
+    private int PushByte(frame: List<int>, value: int, acc: int, nb: int) {
+        var a: int = acc
+        var c: int = nb
+        var bit: int = 7
+        while (bit >= 0) {
+            let on: int = (value / this.Pow2(bit)) % 2
+            // 3-bit code: '1'→110, '0'→100
+            var code: int = 4           // 100
+            if (on == 1) { code = 6 }   // 110
+            var k: int = 2
+            while (k >= 0) {
+                a = a * 2 + (code / this.Pow2(k)) % 2
+                c = c + 1
+                if (c == 8) { frame.Add(a); a = 0; c = 0 }
+                k = k - 1
+            }
+            bit = bit - 1
+        }
+        this.AccOut = a
+        return c
+    }
+
+    private int Pow2(n: int) {
+        var v: int = 1
+        var k: int = 0
+        while (k < n) { v = v * 2; k = k + 1 }
+        return v
+    }
+}
